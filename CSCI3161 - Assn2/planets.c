@@ -8,14 +8,19 @@
 #include <time.h>
 
 #define STAR_COUNT 150
+#define ENTERPRISE_POINT_COUNT 1201
+#define ENTERPRISE_TRIANGLE_COUNT 1989
 
 
 void drawStars(void);
 void twinkleStars(void);
 void printKeyboardControls(void);
+void drawEnterprise(void);
 
 GLint windowWidth = 900;
 GLint windowHeight = 600;
+
+GLfloat camPos[] = { 0, 0, 5 };
 
 GLfloat xRange = 2.0f;
 GLfloat yRange = 2.0f;
@@ -26,6 +31,9 @@ GLint starsToggled = 0;
 GLfloat starPositions[STAR_COUNT][3];
 GLfloat starColors[STAR_COUNT][3];
 
+GLfloat enterprisePoints[ENTERPRISE_POINT_COUNT][3];
+GLint enterpriseTriangles[ENTERPRISE_TRIANGLE_COUNT][3];
+
 void myDisplay(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -33,9 +41,7 @@ void myDisplay(void) {
 	if (starsToggled == 1) {
 		drawStars();
 	}
-
-
-
+	drawEnterprise();
 	glutSwapBuffers();
 }
 
@@ -96,6 +102,45 @@ void initializeStars(void) {
 	}
 }
 
+void initializeEnterprise(void) {
+	FILE* file;
+	if (fopen_s(&file, "enterprise.txt", "r") != 0) {
+		printf("Error opening file\n");
+		return;
+	}
+
+	char line[128];
+	int pointIndex = 0;
+	int triangleIndex = 0;
+	
+	for (int i = 0; i < 3190; i++) {
+		fgets(line, sizeof(line), file);
+		if (line[0] == 'v') {
+			sscanf_s(line, "v %f %f %f", &enterprisePoints[pointIndex][0], &enterprisePoints[pointIndex][1], &enterprisePoints[pointIndex][2]);
+			pointIndex++;
+		}
+		else if (line[0] == 'f') {
+			sscanf_s(line, "f %d %d %d", &enterpriseTriangles[triangleIndex][0], &enterpriseTriangles[triangleIndex][1], &enterpriseTriangles[triangleIndex][2]);
+			triangleIndex++;
+		}
+	}
+
+	fclose(file);
+
+}
+
+void drawEnterprise(void) {
+	GLint colorVal = 1989;
+	for (int i = 0; i < ENTERPRISE_TRIANGLE_COUNT; i++) {
+		glBegin(GL_TRIANGLES);
+		glColor3f(colorVal/3978.0f, colorVal/3978.0f, colorVal/3978.0f);
+		glVertex3fv(enterprisePoints[enterpriseTriangles[i][0] - 1]);
+		glVertex3fv(enterprisePoints[enterpriseTriangles[i][1] - 1]);
+		glVertex3fv(enterprisePoints[enterpriseTriangles[i][2] - 1]);
+		glEnd();
+		colorVal++;
+	}
+}
 
 void initializeGL(void)
 {
@@ -124,7 +169,7 @@ void main(int argc, char** argv)
 {
 	srand(time(NULL));
 
-	initializeStars();
+
 	// initialize the toolkit
 	glutInit(&argc, argv);
 	// set display mode
@@ -135,6 +180,10 @@ void main(int argc, char** argv)
 	glutInitWindowPosition(100, 150);
 	// open the screen window
 	glutCreateWindow("The Hitch Hikers Guide to the Planets");
+
+
+	initializeStars();
+	initializeEnterprise();
 
 	// register redraw function
 	glutDisplayFunc(myDisplay);
