@@ -1,203 +1,102 @@
 
-/************************************************************************************
-
-	File: 			multipleCubes.c
-
-	Description:	A complete OpenGL program to rotate cubes with color interpolation.
-					Demonstration of use of homogeneous coordinate transformations and
-					simple data structure for representing cube from Chapter 4.
-
-					Mouse buttons control direction of rotation.
-
-
-	Author:			E. Angel, modified by Stephen Brooks
-
-*************************************************************************************/
-
 
 
 /* include the library header files */
 #include <stdlib.h>
+#include <stdio.h>
 #include <freeglut.h>
+#include <time.h>
 
-// cube vertices
-GLfloat vertices[][3] = { {-1.0,-1.0,-1.0}, {1.0,-1.0,-1.0}, {1.0,1.0,-1.0}, {-1.0,1.0,-1.0},
-							{-1.0,-1.0, 1.0}, {1.0,-1.0, 1.0}, {1.0,1.0, 1.0}, {-1.0,1.0, 1.0} };
-
-// colors of the vertices
-GLfloat colors[][3] = { {0.0,0.0,0.0}, {1.0,0.0,0.0}, {1.0,1.0,0.0}, {0.0,1.0,0.0},
-							{0.0,0.0,1.0}, {1.0,0.0,1.0}, {1.0,1.0,1.0}, {0.0,1.0,1.0} };
-
-// angle of rotation
-GLfloat theta = 0.0;
-// axis of rotation
-GLint   axis = 0;
+#define STAR_COUNT 150
 
 
+void drawStars(void);
+void twinkleStars(void);
+void printKeyboardControls(void);
 
-/************************************************************************
+GLint windowWidth = 900;
+GLint windowHeight = 600;
 
-	Function:		polygon
+GLfloat xRange = 2.0f;
+GLfloat yRange = 2.0f;
+GLfloat zRange = 10.0f;
 
-	Description:	Draw a polygon via list of vertices.
+GLint starsToggled = 0;
 
-*************************************************************************/
-void polygon(int a, int b, int c, int d)
-{
+GLfloat starPositions[STAR_COUNT][3];
+GLfloat starColors[STAR_COUNT][3];
 
-	glBegin(GL_POLYGON);
-	glColor3fv(colors[a]);
-	glVertex3fv(vertices[a]);
-
-	glColor3fv(colors[b]);
-	glVertex3fv(vertices[b]);
-
-	glColor3fv(colors[c]);
-	glVertex3fv(vertices[c]);
-
-	glColor3fv(colors[d]);
-	glVertex3fv(vertices[d]);
-	glEnd();
-}
-
-
-/************************************************************************
-
-	Function:		colorcube
-
-	Description:	Map the vertices to cube faces.
-
-*************************************************************************/
-void colorcube()
-{
-	polygon(0, 3, 2, 1);
-	polygon(2, 3, 7, 6);
-	polygon(0, 4, 7, 3);
-	polygon(1, 2, 6, 5);
-	polygon(4, 5, 6, 7);
-	polygon(0, 1, 5, 4);
-}
-
-
-/************************************************************************
-
-	Function:		myDisplay
-
-	Description:	Display callback, clears frame buffer and depth buffer,
-					rotates the cube and draws it.
-
-*************************************************************************/
-void myDisplay(void)
-{
-
-	// clear the screen and depth buffer
+void myDisplay(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// load the identity matrix into the model view matrix
-	glLoadIdentity();
 
-	// push the current transformation state on the stack
-	glPushMatrix();
-
-	// rotate depending on the axis
-	switch (axis)
-	{
-	case 0:
-		glRotatef(theta, 1.0, 0.0, 0.0);
-		break;
-	case 1:
-		glRotatef(theta, 0.0, 1.0, 0.0);
-		break;
-	case 2:
-		glRotatef(theta, 0.0, 0.0, 1.0);
-		break;
+	if (starsToggled == 1) {
+		drawStars();
 	}
-	// draw the color cube
-	colorcube();
-
-	// pop the previous transformation state from the stack
-	glPopMatrix();
-
-	// rotate it, always around X-axis
-	glRotatef(theta * 10, 1.0, 0.0, 0.0);
-
-	// move it
-	glTranslatef(1.7, 0, 0);
-
-	// scale it 
-	glScalef(0.2, 0.2, 0.2);
-
-	// draw the color cube
-	colorcube();
-
-	// even smaller
-	// rotate it, always around X-axis
-	glRotatef(theta * 20, 1.0, 0.0, 0.0);
-
-	// move it
-	glTranslatef(0, 2, 0);
-
-	// scale it 
-	glScalef(0.1, 0.1, 0.1);
-
-	// draw the color cube
-	colorcube();
 
 
-	// swap the drawing buffers
+
 	glutSwapBuffers();
 }
 
+void myIdle(void) {
+	twinkleStars();
 
-/************************************************************************
-
-	Function:		myIdle
-
-	Description:	Updates the animation when idle.
-
-*************************************************************************/
-void myIdle()
-{
-
-	// update the rotation around the selected axis 
-	theta += 0.01f;
-
-	// redraw the new state
 	glutPostRedisplay();
 }
 
+void drawStars(void) {
+	glPointSize(2.0f);
+	for (int i = 0; i < STAR_COUNT; i++) {
+		glBegin(GL_POINTS);
+		glColor3fv(starColors[i]);
+		glVertex3fv(starPositions[i]);
+		glEnd();
+	}
+	glPointSize(1.0f);
+}
 
-/************************************************************************
+void twinkleStars(void) {
+	for (int i = 0; i < STAR_COUNT; i++) {
+		GLfloat randColR = (GLfloat)rand() / RAND_MAX;
+		GLfloat randColB = (GLfloat)rand() / RAND_MAX;
+		GLfloat randColG = (GLfloat)rand() / RAND_MAX;
+		starColors[i][0] = randColR;
+		starColors[i][1] = randColB;
+		starColors[i][2] = randColG;
+	}
+}
 
-	Function:		myMouse
+void myKeyboard(unsigned char key, int x, int y) {
+	if (key == 's') {
+		if (starsToggled == 0) {
+			starsToggled = 1;
+		}
+		else {
+			starsToggled = 0;
+		}
+	}
+	glutPostRedisplay();
+}
 
-	Description:	Selects an axis about which to rotate.
+void initializeStars(void) {
+	for (int i = 0; i < STAR_COUNT; i++) {
+		GLfloat randPosX = 2 * xRange * (GLfloat) rand() / RAND_MAX - xRange;
+		GLfloat randPosY = 2 * yRange * (GLfloat) rand() / RAND_MAX - yRange;
+		starPositions[i][0] = randPosX;
+		starPositions[i][1] = randPosY;
+		starPositions[i][2] = -zRange + 1;
 
-*************************************************************************/
-void myMouse(int btn, int state, int x, int y)
-{
-
-	// if the left mouse button, then rotate around the X-axis
-	if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
-		axis = 0;
-
-	// if the middle mouse button, then rotate around the Y-axis
-	if (btn == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN)
-		axis = 1;
-
-	// if the right mouse button, then rotate around the Z-axis
-	if (btn == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
-		axis = 2;
+		GLfloat randColR = (GLfloat)rand() / RAND_MAX;
+		GLfloat randColB = (GLfloat)rand() / RAND_MAX;
+		GLfloat randColG = (GLfloat)rand() / RAND_MAX;
+		starColors[i][0] = randColR;
+		starColors[i][1] = randColB;
+		starColors[i][2] = randColG;
+	}
 }
 
 
-/************************************************************************
-
-	Function:		initializeGL
-
-	Description:	Initializes the OpenGL rendering context for display.
-
-*************************************************************************/
 void initializeGL(void)
 {
 	// enable depth testing
@@ -206,6 +105,7 @@ void initializeGL(void)
 	// set background color to be black
 	glClearColor(0, 0, 0, 1.0);
 
+
 	// change into projection mode so that we can change the camera properties
 	glMatrixMode(GL_PROJECTION);
 
@@ -213,44 +113,60 @@ void initializeGL(void)
 	glLoadIdentity();
 
 	// set window mode to 2D orthographic 
-	glOrtho(-2.0, 2.0, -2.0, 2.0, -10, 10.0);
+	glOrtho(-xRange, xRange, -yRange, yRange, -zRange, zRange);
 
 	// change into model-view mode so that we can change the object positions
 	glMatrixMode(GL_MODELVIEW);
 }
 
 
-
-/************************************************************************
-
-	Function:		main
-
-	Description:	Sets up the openGL rendering context and the windowing
-					system, then begins the display loop.
-
-*************************************************************************/
 void main(int argc, char** argv)
 {
+	srand(time(NULL));
+
+	initializeStars();
 	// initialize the toolkit
 	glutInit(&argc, argv);
 	// set display mode
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	// set window size
-	glutInitWindowSize(500, 500);
+	glutInitWindowSize(windowWidth, windowHeight);
 	// set window position on screen
 	glutInitWindowPosition(100, 150);
 	// open the screen window
-	glutCreateWindow("colorcube");
+	glutCreateWindow("The Hitch Hikers Guide to the Planets");
 
 	// register redraw function
 	glutDisplayFunc(myDisplay);
 	// register the idle function
 	glutIdleFunc(myIdle);
-	// register the mouse button function
-	glutMouseFunc(myMouse);
+
+	glutKeyboardFunc(myKeyboard);
 
 	//initialize the rendering context
 	initializeGL();
+
+	printKeyboardControls();
 	// go into a perpetual loop
 	glutMainLoop();
+}
+
+void printKeyboardControls(void)
+{
+	printf("Scene Controls\n-------------------\n\n");
+	printf("r \t: toggle rings\n");
+	printf("s \t: toggle stars\n");
+	printf("c \t: toggle sun's corona\n");
+	printf("click \t: shoot lasers\n\n");
+	
+	printf("Camera Controls\n------------------- \n\n");
+	printf("Up \tArrow\t: \tmove up\n");
+	printf("Down \tArrow\t: \tmove down\n");
+	printf("Right \tArrow\t: \tmove right\n");
+	printf("Left \tArrow\t: \tmove left\n");
+	printf("PAGE \tUP\t: \tforward\n");
+	printf("PAGE \tDOWN\t: \tbackward\n");
+
+
+	printf("\nNote: May need to use FN key to use Page Up and Page Down on Laptops.\n");
 }
