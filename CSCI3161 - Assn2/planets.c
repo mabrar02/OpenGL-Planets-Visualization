@@ -13,7 +13,7 @@
 #define CORONA_LINE_COUNT 160
 #define ENTERPRISE_POINT_COUNT 1201
 #define ENTERPRISE_TRIANGLE_COUNT 1989
-#define PLANET_COUNT 4
+#define PLANET_COUNT 7
 #define M_PI 3.141592
 
 
@@ -42,15 +42,17 @@ typedef struct {
 
 Planet planets[PLANET_COUNT];
 
-GLint moonSetting[] = { 0, 0, 1, 0 };
-GLfloat planetSizes[] = { 0.2, 0.5, 0.25, 0.3 };
-GLfloat planetOffset[] = { 0.0, 4.0, 2.0, 20.0 };
-GLfloat planetSpeeds[] = { 0.0, 10.0, 20.0, 5.0 };
-GLfloat planetColors[][3] = { {1.0, 1.0, 0.0}, {0.0, 1.0, 1.0}, {1.0, 0.0, 0.0}, {1.0, 0.0, 1.0} };
-GLfloat planetRotations[][3] = { {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0} };
-GLint moonIndices[] = { -1, 2, -1, -1 };
+GLint moonSetting[] = { 0, 0, 1, 0, 0, 0, 1};
+GLfloat planetSizes[] = { 0.2, 0.5, 0.6, 0.3, 0.6, 0.5, 0.25 };
+GLfloat planetOffset[] = { 0.0, 4.0, 2.0, 20.0, 10.0, 15.0, 2.0 };
+GLfloat planetSpeeds[] = { 0.0, 10.0, 20.0, 5.0, 15.0, 8.0, 5.0 };
+GLfloat planetColors[][3] = { {1.0, 1.0, 0.0}, {0.0, 1.0, 1.0}, {0.5, 0.5, 0.5}, {1.0, 0.0, 1.0}, {0.75, 0.1, 0.25}, {0.05, 0.8, 0.1}, {0.75, 0.75, 0.75} };
+GLfloat planetRotations[][3] = { {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0} };
+GLint moonIndices[] = { -1, 2, -1, -1, -1, 6, -1 };
 
-GLint windowWidth = 900;
+//Third planet moon (2), seventh planet moon (6), 
+
+GLint windowWidth = 900; 
 GLint windowHeight = 600;
 
 GLfloat camPosOffset[3] = {0.0, 0.31, 0.72};
@@ -171,16 +173,40 @@ void initializePlanets() {
 void drawOrbits() {
 	glPushMatrix();
 	glColor3f(1.0f, 1.0f, 1.0f);
-	glScalef(0.2, 0.2, 0.2);
+	glScalef(planets[0].size, planets[0].size, planets[0].size);
 
-	glBegin(GL_LINE_LOOP);
-	for (int i = 0; i < 360; i += 5) {
-		GLfloat angle = i * M_PI / 180.0;
-		GLfloat x = 4 * cos(angle);
-		GLfloat z = 4 * sin(angle);
-		glVertex3f(x, 0.0, z);
+	for (int i = 0; i < PLANET_COUNT; i++) {
+		glPushMatrix();
+		if (planets[i].isMoon == 0) {
+			glBegin(GL_LINE_LOOP);
+			for (int j = 0; j < 360; j += 5) {
+				GLfloat angle = j * M_PI / 180.0;
+				GLfloat x = planets[i].offset * cos(angle);
+				GLfloat z = planets[i].offset * sin(angle);
+				glVertex3f(x, 0.0, z);
+			}
+			glEnd();
+
+			if (planets[i].moonIndex != -1) {
+				GLint index = planets[i].moonIndex;
+				glRotatef(theta * planets[i].speed, planets[i].rotations[0], planets[i].rotations[1], planets[i].rotations[2]);
+				glTranslatef(planets[i].offset, 0.0, 0.0);
+				glScalef(planets[i].size, planets[i].size, planets[i].size);
+
+				glBegin(GL_LINE_LOOP);
+				for (int j = 0; j < 360; j += 5) {
+					GLfloat angle = j * M_PI / 180.0;
+					GLfloat x = planets[index].offset * cos(angle);
+					GLfloat z = planets[index].offset * sin(angle);
+					glVertex3f(x, 0.0, z);
+				}
+				glEnd();
+			}
+		}
+		glPopMatrix();
 	}
-	glEnd();
+
+
 	glPopMatrix();
 }
 
