@@ -6,8 +6,9 @@
 #include <stdio.h>
 #include <freeglut.h>
 #include <time.h>
+#include <math.h>
 
-#define STAR_COUNT 150
+#define STAR_COUNT 500
 #define ENTERPRISE_POINT_COUNT 1201
 #define ENTERPRISE_TRIANGLE_COUNT 1989
 
@@ -16,17 +17,22 @@ void drawStars(void);
 void twinkleStars(void);
 void printKeyboardControls(void);
 void drawEnterprise(void);
+void drawPlanets(void);
+void drawAxis(void);
+void drawOrbits(void);
 
 GLint windowWidth = 900;
 GLint windowHeight = 600;
 
-GLfloat camPos[] = { 0, 0, 5 };
+GLfloat camPos[] = { -1, 2, 5 };
+GLfloat theta = 0.0f;
 
 GLfloat xRange = 2.0f;
 GLfloat yRange = 2.0f;
 GLfloat zRange = 10.0f;
 
 GLint starsToggled = 0;
+GLint orbitsToggled = 0;
 
 GLfloat starPositions[STAR_COUNT][3];
 GLfloat starColors[STAR_COUNT][3];
@@ -37,19 +43,90 @@ GLint enterpriseTriangles[ENTERPRISE_TRIANGLE_COUNT][3];
 void myDisplay(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glLoadIdentity();
+	gluLookAt(camPos[0], camPos[1], camPos[2], 0, 0, 0, 0, 1, 0);
+
+	drawAxis();
 
 	if (starsToggled == 1) {
 		drawStars();
 	}
-	drawEnterprise();
+	//drawEnterprise();
+	if (orbitsToggled == 1) {
+		drawOrbits();
+	}
+
+	drawPlanets();
+
+
+
+
+
+
+
 	glutSwapBuffers();
 }
 
 void myIdle(void) {
 	twinkleStars();
-
+	theta += 0.1f;
 	glutPostRedisplay();
 }
+
+void drawPlanets() {
+	glScalef(0.2, 0.2, 0.2);
+	glColor3f(1.0f, 1.0f, 0.0f);
+	GLUquadric* quad = gluNewQuadric();
+	gluSphere(quad, 1.0, 32, 32);
+
+	glRotatef(theta * 10, 0, 1, 0);
+	glTranslatef(4.0, 0.0, 0.0);
+	glScalef(0.5, 0.5, 0.5);
+
+	glColor3f(0.0f, 1.0f, 1.0f);
+
+	gluSphere(quad, 1.0, 32, 32);
+
+
+	glRotatef(theta * 20, 0, 1, 0);
+	glTranslatef(2.0, 0.0, 0.0);
+	glScalef(0.25, 0.25, 0.25);
+
+	glColor3f(1.0f, 0.0f, 0.0f);
+	gluSphere(quad, 1.0, 32, 32);
+}
+
+void drawOrbits() {
+	glPushMatrix();
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glScalef(0.2, 0.2, 0.2);
+
+	glBegin(GL_LINE_LOOP);
+	for (int i = 0; i < 360; i += 5) {
+		GLfloat angle = i * 3.141592 / 180.0;
+		GLfloat x = 4 * cos(angle);
+		GLfloat z = 4 * sin(angle);
+		glVertex3f(x, 0.0, z);
+	}
+
+	glEnd();
+	glPopMatrix();
+}
+
+void drawAxis(void) {
+	glBegin(GL_LINES);
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glVertex3f(-xRange, 0, 0);
+	glVertex3f(xRange, 0, 0);
+
+	glVertex3f(0, -yRange, 0);
+	glVertex3f(0, yRange, 0);
+
+	glVertex3f(0, 0, -zRange);
+	glVertex3f(0, 0, zRange);
+	glEnd();
+}
+
 
 void drawStars(void) {
 	glPointSize(2.0f);
@@ -82,16 +159,25 @@ void myKeyboard(unsigned char key, int x, int y) {
 			starsToggled = 0;
 		}
 	}
+	else if (key == 'r') {
+		if (orbitsToggled == 0) {
+			orbitsToggled = 1;
+		}
+		else {
+			orbitsToggled = 0;
+		}
+	}
 	glutPostRedisplay();
 }
 
 void initializeStars(void) {
 	for (int i = 0; i < STAR_COUNT; i++) {
-		GLfloat randPosX = 2 * xRange * (GLfloat) rand() / RAND_MAX - xRange;
-		GLfloat randPosY = 2 * yRange * (GLfloat) rand() / RAND_MAX - yRange;
+		GLfloat randPosX = 10 * xRange * (GLfloat) rand() / RAND_MAX - 5 * xRange;
+		GLfloat randPosY = 10 * yRange * (GLfloat) rand() / RAND_MAX - 5 * yRange;
+		GLfloat randPosZ = 2 * zRange * (GLfloat)rand() / RAND_MAX - zRange;
 		starPositions[i][0] = randPosX;
 		starPositions[i][1] = randPosY;
-		starPositions[i][2] = -zRange + 1;
+		starPositions[i][2] = randPosZ;
 
 		GLfloat randColR = (GLfloat)rand() / RAND_MAX;
 		GLfloat randColB = (GLfloat)rand() / RAND_MAX;
@@ -158,7 +244,8 @@ void initializeGL(void)
 	glLoadIdentity();
 
 	// set window mode to 2D orthographic 
-	glOrtho(-xRange, xRange, -yRange, yRange, -zRange, zRange);
+	//glOrtho(-xRange, xRange, -yRange, yRange, -zRange, zRange);
+	gluPerspective(45, (float)windowWidth / (float)windowHeight, 0.1, 20);
 
 	// change into model-view mode so that we can change the object positions
 	glMatrixMode(GL_MODELVIEW);
