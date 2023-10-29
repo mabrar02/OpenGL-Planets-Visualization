@@ -7,10 +7,14 @@
 #include <freeglut.h>
 #include <time.h>
 #include <math.h>
+#include <string.h>
 
 #define STAR_COUNT 500
+#define CORONA_LINE_COUNT 160
 #define ENTERPRISE_POINT_COUNT 1201
 #define ENTERPRISE_TRIANGLE_COUNT 1989
+#define PLANET_COUNT 4
+#define M_PI 3.141592
 
 
 void drawStars(void);
@@ -20,11 +24,36 @@ void drawEnterprise(void);
 void drawPlanets(void);
 void drawAxis(void);
 void drawOrbits(void);
+void moveEnterprise(void);
+void positionCamera(void);
+void initializePlanets(void);
+void drawCorona(void);
+void randomizeCorona(void);
+
+typedef struct {
+	GLint isMoon;
+	GLfloat size;
+	GLfloat offset;
+	GLfloat speed;
+	GLfloat rotations[3];
+	GLfloat colors[3];
+	GLint moonIndex;
+} Planet;
+
+Planet planets[PLANET_COUNT];
+
+GLint moonSetting[] = { 0, 0, 1, 0 };
+GLfloat planetSizes[] = { 0.2, 0.5, 0.25, 0.3 };
+GLfloat planetOffset[] = { 0.0, 4.0, 2.0, 20.0 };
+GLfloat planetSpeeds[] = { 0.0, 10.0, 20.0, 5.0 };
+GLfloat planetColors[][3] = { {1.0, 1.0, 0.0}, {0.0, 1.0, 1.0}, {1.0, 0.0, 0.0}, {1.0, 0.0, 1.0} };
+GLfloat planetRotations[][3] = { {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0} };
+GLint moonIndices[] = { -1, 2, -1, -1 };
 
 GLint windowWidth = 900;
 GLint windowHeight = 600;
 
-GLfloat camPos[] = { -1, 2, 5 };
+GLfloat camPosOffset[3] = {0.0, 0.31, 0.72};
 GLfloat theta = 0.0f;
 
 GLfloat xRange = 2.0f;
@@ -33,25 +62,31 @@ GLfloat zRange = 10.0f;
 
 GLint starsToggled = 0;
 GLint orbitsToggled = 0;
+GLint coronaToggled = 0;
 
 GLfloat starPositions[STAR_COUNT][3];
 GLfloat starColors[STAR_COUNT][3];
 
+GLfloat coronaPositions[CORONA_LINE_COUNT];
+GLfloat coronaLength = 0.5;
+
 GLfloat enterprisePoints[ENTERPRISE_POINT_COUNT][3];
 GLint enterpriseTriangles[ENTERPRISE_TRIANGLE_COUNT][3];
+GLfloat enterpriseSpeed = 0.1;
+GLfloat enterpriseScale = 0.1;
 
 void myDisplay(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glLoadIdentity();
-	gluLookAt(camPos[0], camPos[1], camPos[2], 0, 0, 0, 0, 1, 0);
 
+	positionCamera();
 	drawAxis();
 
 	if (starsToggled == 1) {
 		drawStars();
-	}
-	//drawEnterprise();
+	} 
+	drawEnterprise();
 	if (orbitsToggled == 1) {
 		drawOrbits();
 	}
@@ -59,56 +94,92 @@ void myDisplay(void) {
 	drawPlanets();
 
 
-
-
-
-
+	if (coronaToggled == 1) {
+		drawCorona();
+	}
 
 	glutSwapBuffers();
 }
 
 void myIdle(void) {
 	twinkleStars();
+	randomizeCorona();
 	theta += 0.1f;
 	glutPostRedisplay();
 }
 
-void drawPlanets() {
-	glScalef(0.2, 0.2, 0.2);
-	glColor3f(1.0f, 1.0f, 0.0f);
-	GLUquadric* quad = gluNewQuadric();
-	gluSphere(quad, 1.0, 32, 32);
+void positionCamera(void) {
+	GLfloat enterpriseX = enterprisePoints[ENTERPRISE_POINT_COUNT/2][0] * enterpriseScale;
+	GLfloat enterpriseY = enterprisePoints[ENTERPRISE_POINT_COUNT / 2][1] * enterpriseScale;
+	GLfloat enterpriseZ = enterprisePoints[ENTERPRISE_POINT_COUNT / 2][2] * enterpriseScale;
 
-	glRotatef(theta * 10, 0, 1, 0);
-	glTranslatef(4.0, 0.0, 0.0);
-	glScalef(0.5, 0.5, 0.5);
+	GLfloat cameraX = enterpriseX + camPosOffset[0];
+	GLfloat cameraY = enterpriseY + camPosOffset[1];
+	GLfloat cameraZ = enterpriseZ + camPosOffset[2];
 
-	glColor3f(0.0f, 1.0f, 1.0f);
-
-	gluSphere(quad, 1.0, 32, 32);
-
-
-	glRotatef(theta * 20, 0, 1, 0);
-	glTranslatef(2.0, 0.0, 0.0);
-	glScalef(0.25, 0.25, 0.25);
-
-	glColor3f(1.0f, 0.0f, 0.0f);
-	gluSphere(quad, 1.0, 32, 32);
+	gluLookAt(cameraX, cameraY, cameraZ, enterpriseX, enterpriseY, enterpriseZ, 0.0, 1.0, 0.0);
 }
+
+void drawPlanets() {
+	glPushMatrix();
+	GLUquadric* quad = gluNewQuadric();
+	glScalef(planets[0].size, planets[0].size, planets[0].size);
+	glColor3fv(planets[0].colors);
+	gluSphere(quad, 1.0, 32, 32);
+
+	for (int i = 1; i < PLANET_COUNT; i++) {
+		glPushMatrix();
+		if (planets[i].isMoon == 0) {
+			glRotatef(theta * planets[i].speed, planets[i].rotations[0], planets[i].rotations[1], planets[i].rotations[2]);
+			glTranslatef(planets[i].offset, 0.0, 0.0);
+			glScalef(planets[i].size, planets[i].size, planets[i].size);
+			glColor3fv(planets[i].colors);
+			gluSphere(quad, 1.0, 32, 32);
+
+			if (planets[i].moonIndex != -1) {
+				GLint index = planets[i].moonIndex;
+
+
+				glRotatef(theta * planets[index].speed, planets[index].rotations[0], planets[index].rotations[1], planets[index].rotations[2]);
+				glTranslatef(planets[index].offset, 0.0, 0.0);
+				glScalef(planets[index].size, planets[index].size, planets[index].size);
+				glColor3fv(planets[index].colors);
+				gluSphere(quad, 1.0, 32, 32);
+
+			}
+		}
+		glPopMatrix();
+	}
+	glPopMatrix();
+}
+
+void initializePlanets() {
+
+	for (int i = 0; i < PLANET_COUNT; i++) {
+		planets[i].isMoon = moonSetting[i];
+		planets[i].size = planetSizes[i];
+		planets[i].offset = planetOffset[i];
+		planets[i].speed = planetSpeeds[i];
+		memcpy(planets[i].rotations, planetRotations[i], 3 * sizeof(GLfloat));
+		memcpy(planets[i].colors, planetColors[i], 3 * sizeof(GLfloat));
+		planets[i].moonIndex = moonIndices[i];
+
+	}
+}
+
 
 void drawOrbits() {
 	glPushMatrix();
-	glColor3f(0.0f, 1.0f, 0.0f);
+	glColor3f(1.0f, 1.0f, 1.0f);
 	glScalef(0.2, 0.2, 0.2);
 
 	glBegin(GL_LINE_LOOP);
 	for (int i = 0; i < 360; i += 5) {
-		GLfloat angle = i * 3.141592 / 180.0;
+		GLfloat angle = i * M_PI / 180.0;
 		GLfloat x = 4 * cos(angle);
 		GLfloat z = 4 * sin(angle);
 		glVertex3f(x, 0.0, z);
 	}
-
 	glEnd();
 	glPopMatrix();
 }
@@ -150,6 +221,26 @@ void twinkleStars(void) {
 	}
 }
 
+void drawCorona(void) {
+	for (int i = 0; i < CORONA_LINE_COUNT; i++) {
+		glLineWidth(5.0f);
+		glBegin(GL_LINES);
+		glColor4f(1.0, 1.0, 0.0, 1.0);
+		glVertex2f(0.0, 0.0);
+
+		glColor4f(1.0, 0.5, 0.0, 0.0);
+		glVertex2f(coronaLength * cos(coronaPositions[i]), coronaLength * sin(coronaPositions[i]));
+		glEnd();
+	}
+	glLineWidth(1.0f);
+}
+
+void randomizeCorona(void) {
+	for (int i = 0; i < CORONA_LINE_COUNT; i++) {
+		coronaPositions[i] = (GLfloat)rand() / RAND_MAX * 2.0 * M_PI;
+	}
+}
+
 void myKeyboard(unsigned char key, int x, int y) {
 	if (key == 's') {
 		if (starsToggled == 0) {
@@ -167,8 +258,72 @@ void myKeyboard(unsigned char key, int x, int y) {
 			orbitsToggled = 0;
 		}
 	}
+	else if (key == 'c') {
+		if (coronaToggled == 0) {
+			coronaToggled = 1;
+		}
+		else {
+			coronaToggled = 0;
+		}
+	}
+	else if (key == 'q') {
+		camPosOffset[0] -= 0.01;
+	}
+	else if (key == 'w') {
+		camPosOffset[1] -= 0.01;
+	}
+	else if (key == 'e') {
+		camPosOffset[2] -= 0.01;
+	}
+	else if (key == 'z') {
+		camPosOffset[0] += 0.01;
+	}
+	else if (key == 'x') {
+		camPosOffset[1] += 0.01;
+	}
+	else if (key == 'v') {
+		camPosOffset[2] += 0.01;
+	}
+
+	printf("x: %f, y: %f, z: %f\n", camPosOffset[0], camPosOffset[1], camPosOffset[2]);
+
 	glutPostRedisplay();
 }
+
+
+void mySpecialKeyboard(int key, int x, int y) {
+	switch (key) {
+		case GLUT_KEY_UP:
+			moveEnterprise(0, 1, 0);
+			break;
+		case GLUT_KEY_DOWN:
+			moveEnterprise(0, -1, 0);
+			break;
+		case GLUT_KEY_RIGHT:
+			moveEnterprise(1, 0, 0);
+			break;
+		case GLUT_KEY_LEFT:
+			moveEnterprise(-1, 0, 0);
+			break;
+		case GLUT_KEY_PAGE_UP:
+			moveEnterprise(0, 0, -1);
+			break;
+		case GLUT_KEY_PAGE_DOWN:
+			moveEnterprise(0, 0, 1);
+			break;
+	}
+	glutPostRedisplay();
+}
+
+void moveEnterprise(int x, int y, int z) {
+	for (int i = 0; i < ENTERPRISE_POINT_COUNT; i++) {
+		enterprisePoints[i][0] += x * enterpriseSpeed;
+		enterprisePoints[i][1] += y * enterpriseSpeed;
+		enterprisePoints[i][2] += z * enterpriseSpeed;
+	}
+}
+
+
 
 void initializeStars(void) {
 	for (int i = 0; i < STAR_COUNT; i++) {
@@ -211,11 +366,19 @@ void initializeEnterprise(void) {
 		}
 	}
 
+	for (int i = 0; i < ENTERPRISE_POINT_COUNT; i++) {
+		enterprisePoints[i][1] += 20;
+		enterprisePoints[i][2] += 100;
+	}
+
 	fclose(file);
 
 }
 
 void drawEnterprise(void) {
+	glPushMatrix();
+	glTranslatef(0, 0, 3*enterpriseScale);
+	glScalef(enterpriseScale, enterpriseScale, enterpriseScale);
 	GLint colorVal = 1989;
 	for (int i = 0; i < ENTERPRISE_TRIANGLE_COUNT; i++) {
 		glBegin(GL_TRIANGLES);
@@ -226,12 +389,15 @@ void drawEnterprise(void) {
 		glEnd();
 		colorVal++;
 	}
+	glPopMatrix();
 }
 
 void initializeGL(void)
 {
 	// enable depth testing
 	glEnable(GL_DEPTH_TEST);
+
+	glEnable(GL_BLEND);
 
 	// set background color to be black
 	glClearColor(0, 0, 0, 1.0);
@@ -260,7 +426,7 @@ void main(int argc, char** argv)
 	// initialize the toolkit
 	glutInit(&argc, argv);
 	// set display mode
-	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 	// set window size
 	glutInitWindowSize(windowWidth, windowHeight);
 	// set window position on screen
@@ -271,6 +437,7 @@ void main(int argc, char** argv)
 
 	initializeStars();
 	initializeEnterprise();
+	initializePlanets();
 
 	// register redraw function
 	glutDisplayFunc(myDisplay);
@@ -278,6 +445,10 @@ void main(int argc, char** argv)
 	glutIdleFunc(myIdle);
 
 	glutKeyboardFunc(myKeyboard);
+
+	glutSpecialFunc(mySpecialKeyboard);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	//initialize the rendering context
 	initializeGL();
