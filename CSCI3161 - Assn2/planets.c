@@ -29,7 +29,7 @@ void positionCamera(void);
 void initializePlanets(void);
 void drawCorona(void);
 void randomizeCorona(void);
-void drawTest(void);
+void drawLaser(void);
 
 typedef struct {
 	GLint isMoon;
@@ -78,8 +78,16 @@ GLint enterpriseTriangles[ENTERPRISE_TRIANGLE_COUNT][3];
 GLfloat enterpriseSpeed = 0.1;
 GLfloat enterpriseScale = 0.1;
 
-GLint mousePressed = 0;
-GLfloat laserPos[3];
+GLint leftLaser = 0;
+GLint rightLaser = 0;
+GLfloat laserSpawnPos[3];
+GLfloat leftLaserTimer = 0;
+GLfloat rightLaserTimer = 0;
+GLfloat laserTimer = 2;
+GLfloat laserSpeed = 0.25f;
+
+GLfloat leftLaserPos[] = { 0, 0, 0 };
+GLfloat rightLaserPos[] = { 0, 0, 0 };
 
 void myDisplay(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -102,7 +110,7 @@ void myDisplay(void) {
 
 	drawPlanets();
 
-	//drawTest();
+	drawLaser();
 
 	if (coronaToggled == 1) {
 		drawCorona();
@@ -111,13 +119,31 @@ void myDisplay(void) {
 	glutSwapBuffers();
 }
 
-void drawTest(void) {
-	if (mousePressed) {
-		glPointSize(5.0f);
-		glBegin(GL_POINTS);
-		glVertex3fv(laserPos);
+void drawLaser(void) {
+	glPushMatrix();
+	glTranslatef(0, 0, 3 * enterpriseScale);
+	glScalef(enterpriseScale, enterpriseScale, enterpriseScale);
+	if (leftLaser == 1) {
+		glLineWidth(5.0f);
+		glBegin(GL_LINES);
+		glColor4f(1.0, 0.0, 0.0, 1.0);
+		glVertex3fv(leftLaserPos);
+		glColor4f(0.0, 0.0, 1.0, 0.25);
+		glVertex3f(leftLaserPos[0], leftLaserPos[1], leftLaserPos[2] - 0.5);
 		glEnd();
 	}
+	if (rightLaser == 1) {
+		glLineWidth(5.0f);
+		glBegin(GL_LINES);
+		glColor4f(1.0, 0.0, 0.0, 1.0);
+		glVertex3fv(rightLaserPos);
+		glColor4f(0.0, 0.0, 1.0, 0.25);
+		glVertex3f(rightLaserPos[0], rightLaserPos[1], rightLaserPos[2] - 0.5);
+		glEnd();
+	}
+
+	glPopMatrix();
+	glLineWidth(1.0f);
 }
 
 
@@ -125,6 +151,25 @@ void myIdle(void) {
 	twinkleStars();
 	randomizeCorona();
 	theta += 0.1f;
+
+	if (leftLaserTimer > 0) {
+		leftLaserTimer -= 0.1f;
+		leftLaserPos[2] -= laserSpeed;
+		if (leftLaserTimer <= 0) {
+			leftLaserTimer = 0;
+			leftLaser = 0;
+		}
+	}
+
+	if (rightLaserTimer > 0) {
+		rightLaserTimer -= 0.1f;
+		rightLaserPos[2] -= laserSpeed;
+		if (rightLaserTimer <= 0) {
+			rightLaserTimer = 0;
+			rightLaser = 0;
+		}
+	}
+
 	glutPostRedisplay();
 }
 
@@ -268,6 +313,8 @@ void twinkleStars(void) {
 }
 
 void drawCorona(void) {
+	glPushMatrix();
+	glTranslatef(0, 0, 0.1);
 	for (int i = 0; i < CORONA_LINE_COUNT; i++) {
 		glLineWidth(5.0f);
 		glBegin(GL_LINES);
@@ -279,6 +326,7 @@ void drawCorona(void) {
 		glEnd();
 	}
 	glLineWidth(1.0f);
+	glPopMatrix();
 }
 
 void randomizeCorona(void) {
@@ -331,19 +379,42 @@ void myKeyboard(unsigned char key, int x, int y) {
 		camPosOffset[2] += 0.01;
 	}
 
-	printf("x: %f, y: %f, z: %f\n", camPosOffset[0], camPosOffset[1], camPosOffset[2]);
 
 	glutPostRedisplay();
 }
 
 void myMouse(int button, int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		mousePressed = 1;
-		laserPos[0] = enterprisePoints[1989 / 2][0];
-		laserPos[1] = enterprisePoints[1989 / 2][1];
-		laserPos[2] = enterprisePoints[1989 / 2][2];
+		if (leftLaserTimer == 0) {
+			leftLaser = 1;
+			leftLaserTimer = laserTimer;
+
+			laserSpawnPos[0] = enterprisePoints[1989 / 2][0];
+			laserSpawnPos[1] = enterprisePoints[1989 / 2][1];
+			laserSpawnPos[2] = enterprisePoints[1989 / 2][2];
+
+			leftLaserPos[0] = laserSpawnPos[0] - 0.1f;
+			leftLaserPos[1] = laserSpawnPos[1];
+			leftLaserPos[2] = laserSpawnPos[2] - 0.1f;
+		}
+
 	}
-	printf("LASER POS: %f, %f, %f\n", laserPos[0], laserPos[1], laserPos[2]);
+	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+
+		if (rightLaserTimer == 0) {
+			rightLaser = 1;
+			rightLaserTimer = laserTimer;
+
+
+			laserSpawnPos[0] = enterprisePoints[1989 / 2][0];
+			laserSpawnPos[1] = enterprisePoints[1989 / 2][1];
+			laserSpawnPos[2] = enterprisePoints[1989 / 2][2];
+
+			rightLaserPos[0] = laserSpawnPos[0] + 0.1f;
+			rightLaserPos[1] = laserSpawnPos[1];
+			rightLaserPos[2] = laserSpawnPos[2] - 0.1f;
+		}
+	}
 	glutPostRedisplay();
 }
 
@@ -369,16 +440,19 @@ void mySpecialKeyboard(int key, int x, int y) {
 			break;
 	}
 
-	printf("%f, %f, %f\n", enterprisePoints[1989 / 2][0], enterprisePoints[1989 / 2][1], enterprisePoints[1989 / 2][2]);
 	glutPostRedisplay();
 }
 
 void moveEnterprise(int x, int y, int z) {
+
+	GLfloat rotationFactor = 0.5f;
+
 	for (int i = 0; i < ENTERPRISE_POINT_COUNT; i++) {
 		enterprisePoints[i][0] += x * enterpriseSpeed;
 		enterprisePoints[i][1] += y * enterpriseSpeed;
 		enterprisePoints[i][2] += z * enterpriseSpeed;
 	}
+
 }
 
 
@@ -524,8 +598,9 @@ void printKeyboardControls(void)
 	printf("r \t: toggle rings\n");
 	printf("s \t: toggle stars\n");
 	printf("c \t: toggle sun's corona\n");
-	printf("click \t: shoot lasers\n\n");
-	
+	printf("LClick \t: shoot left lasers\n");
+	printf("RClick \t: shoot right lasers\n\n");
+
 	printf("Camera Controls\n------------------- \n\n");
 	printf("Up \tArrow\t: \tmove up\n");
 	printf("Down \tArrow\t: \tmove down\n");
