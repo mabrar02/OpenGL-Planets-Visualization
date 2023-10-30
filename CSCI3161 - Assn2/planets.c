@@ -29,6 +29,7 @@ void positionCamera(void);
 void initializePlanets(void);
 void drawCorona(void);
 void randomizeCorona(void);
+void drawTest(void);
 
 typedef struct {
 	GLint isMoon;
@@ -77,6 +78,9 @@ GLint enterpriseTriangles[ENTERPRISE_TRIANGLE_COUNT][3];
 GLfloat enterpriseSpeed = 0.1;
 GLfloat enterpriseScale = 0.1;
 
+GLint mousePressed = 0;
+GLfloat laserPos[3];
+
 void myDisplay(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -85,16 +89,20 @@ void myDisplay(void) {
 	positionCamera();
 	drawAxis();
 
+
 	if (starsToggled == 1) {
 		drawStars();
 	} 
 	drawEnterprise();
+
+
 	if (orbitsToggled == 1) {
 		drawOrbits();
 	}
 
 	drawPlanets();
 
+	//drawTest();
 
 	if (coronaToggled == 1) {
 		drawCorona();
@@ -102,6 +110,16 @@ void myDisplay(void) {
 
 	glutSwapBuffers();
 }
+
+void drawTest(void) {
+	if (mousePressed) {
+		glPointSize(5.0f);
+		glBegin(GL_POINTS);
+		glVertex3fv(laserPos);
+		glEnd();
+	}
+}
+
 
 void myIdle(void) {
 	twinkleStars();
@@ -137,7 +155,7 @@ void drawPlanets() {
 			glScalef(planets[i].size, planets[i].size, planets[i].size);
 			glColor3fv(planets[i].colors);
 			gluSphere(quad, 1.0, 32, 32);
-
+			
 			if (planets[i].moonIndex != -1) {
 				GLint index = planets[i].moonIndex;
 
@@ -152,6 +170,8 @@ void drawPlanets() {
 		}
 		glPopMatrix();
 	}
+
+
 	glPopMatrix();
 }
 
@@ -316,6 +336,16 @@ void myKeyboard(unsigned char key, int x, int y) {
 	glutPostRedisplay();
 }
 
+void myMouse(int button, int state, int x, int y) {
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		mousePressed = 1;
+		laserPos[0] = enterprisePoints[1989 / 2][0];
+		laserPos[1] = enterprisePoints[1989 / 2][1];
+		laserPos[2] = enterprisePoints[1989 / 2][2];
+	}
+	printf("LASER POS: %f, %f, %f\n", laserPos[0], laserPos[1], laserPos[2]);
+	glutPostRedisplay();
+}
 
 void mySpecialKeyboard(int key, int x, int y) {
 	switch (key) {
@@ -338,6 +368,8 @@ void mySpecialKeyboard(int key, int x, int y) {
 			moveEnterprise(0, 0, 1);
 			break;
 	}
+
+	printf("%f, %f, %f\n", enterprisePoints[1989 / 2][0], enterprisePoints[1989 / 2][1], enterprisePoints[1989 / 2][2]);
 	glutPostRedisplay();
 }
 
@@ -471,6 +503,8 @@ void main(int argc, char** argv)
 	glutIdleFunc(myIdle);
 
 	glutKeyboardFunc(myKeyboard);
+
+	glutMouseFunc(myMouse);
 
 	glutSpecialFunc(mySpecialKeyboard);
 
