@@ -11,6 +11,7 @@
 
 #define STAR_COUNT 500
 #define CORONA_LINE_COUNT 160
+#define BOOSTER_LINE_COUNT 20
 #define ENTERPRISE_POINT_COUNT 1201
 #define ENTERPRISE_TRIANGLE_COUNT 1989
 #define PLANET_COUNT 11
@@ -30,6 +31,8 @@ void initializePlanets(void);
 void drawCorona(void);
 void randomizeCorona(void);
 void drawLaser(void);
+void drawBoosters(void);
+void randomizeBoosters(void);
 
 typedef struct {
 	GLint isMoon;
@@ -69,6 +72,7 @@ GLfloat zRange = 10.0f;
 GLint starsToggled = 0;
 GLint orbitsToggled = 0;
 GLint coronaToggled = 0;
+GLint boostersToggled = 0;
 
 GLfloat starPositions[STAR_COUNT][3];
 GLfloat starColors[STAR_COUNT][3];
@@ -80,6 +84,9 @@ GLfloat enterprisePoints[ENTERPRISE_POINT_COUNT][3];
 GLint enterpriseTriangles[ENTERPRISE_TRIANGLE_COUNT][3];
 GLfloat enterpriseSpeed = 0.1;
 GLfloat enterpriseScale = 0.55;
+GLfloat moveDir[] = { 0, 0, 0 };
+GLfloat boosterPositions[BOOSTER_LINE_COUNT];
+GLfloat boosterLength = 0.15;
 
 GLint leftLaser = 0;
 GLint rightLaser = 0;
@@ -103,9 +110,15 @@ void myDisplay(void) {
 
 	if (starsToggled == 1) {
 		drawStars();
-	} 
+	}
+
+
+
 	drawEnterprise();
 
+	if (boostersToggled == 1) {
+		drawBoosters();
+	}
 
 	if (orbitsToggled == 1) {
 		drawOrbits();
@@ -114,6 +127,8 @@ void myDisplay(void) {
 	drawPlanets();
 
 	drawLaser();
+
+
 
 	if (coronaToggled == 1) {
 		drawCorona();
@@ -149,10 +164,71 @@ void drawLaser(void) {
 	glLineWidth(1.0f);
 }
 
+void drawBoosters(void) {
+	glPushMatrix();
+	glTranslatef(0, 0, 8.05);
+	glScalef(enterpriseScale, enterpriseScale, enterpriseScale);
+	for (int i = 0; i < BOOSTER_LINE_COUNT; i++) {
+		if (moveDir[2] == 1) break;
+		glLineWidth(2.0f);
+		GLfloat boosterX = enterprisePoints[0][0];
+		GLfloat boosterY = enterprisePoints[0][1];
+		GLfloat boosterZ = enterprisePoints[0][2];
+		GLfloat boosterX2 = enterprisePoints[1200][0];;
+		GLfloat boosterY2 = enterprisePoints[1200][1];;
+		GLfloat boosterZ2 = enterprisePoints[1200][2];
+
+		if (moveDir[0] != 0) {
+			boosterX = enterprisePoints[0][0] + boosterLength * cos(boosterPositions[i] + M_PI/2 * moveDir[0]);
+			boosterY = enterprisePoints[0][1] + boosterLength * sin(boosterPositions[i] + M_PI/2 * moveDir[0]);
+
+			boosterX2 = enterprisePoints[1200][0] + boosterLength * cos(boosterPositions[i] + M_PI / 2 * moveDir[0]);
+			boosterY2 = enterprisePoints[1200][1] + boosterLength * sin(boosterPositions[i] + M_PI / 2 * moveDir[0]);
+		}
+		else if (moveDir[1] != 0) {
+			boosterX = enterprisePoints[0][0] + boosterLength * cos(boosterPositions[i]) * -moveDir[1];
+			boosterY = enterprisePoints[0][1] + boosterLength * sin(boosterPositions[i]) * -moveDir[1];
+
+			boosterX2 = enterprisePoints[1200][0] + boosterLength * cos(boosterPositions[i]) *  -moveDir[1];
+			boosterY2 = enterprisePoints[1200][1] + boosterLength * sin(boosterPositions[i]) * -moveDir[1];
+		}
+		else if (moveDir[2] == -1) {
+			boosterX = enterprisePoints[0][0] + boosterLength * cos(boosterPositions[i]) * 1.5;
+			boosterZ = enterprisePoints[0][2] + boosterLength * sin(boosterPositions[i]) * 1.5;
+
+			boosterX2 = enterprisePoints[1200][0] + boosterLength * cos(boosterPositions[i]) * 1.5;
+			boosterZ2 = enterprisePoints[1200][2] + boosterLength * sin(boosterPositions[i]) * 1.5;
+		}
+
+		glBegin(GL_LINES);
+		glColor4f(1.0, 0.75, 0.0, 1.0);
+		glVertex3fv(enterprisePoints[0]);
+		glColor4f(1.0, 0.25, 0.0, 0.25);
+		glVertex3f(boosterX, boosterY, boosterZ);
+
+		glColor4f(1.0, 0.75, 0.0, 1.0);
+		glVertex3fv(enterprisePoints[1200]);
+		glColor4f(1.0, 0.25, 0.0, 0.25);
+		glVertex3f(boosterX2, boosterY2, boosterZ2);
+		glEnd();
+	}
+
+
+
+	glPopMatrix();
+}
+
+void randomizeBoosters(void) {
+	for (int i = 0; i < BOOSTER_LINE_COUNT; i++) {
+		boosterPositions[i] = ((GLfloat)rand() / RAND_MAX) * (M_PI / 2.0) + (M_PI / 4.0);
+	}
+}
+
 
 void myIdle(void) {
 	twinkleStars();
 	randomizeCorona();
+	randomizeBoosters();
 	theta += 0.1f;
 
 	if (leftLaserTimer > 0) {
@@ -180,12 +256,6 @@ void positionCamera(void) {
 	GLfloat enterpriseX = enterprisePoints[ENTERPRISE_POINT_COUNT/2][0] * enterpriseScale;
 	GLfloat enterpriseY = enterprisePoints[ENTERPRISE_POINT_COUNT / 2][1] * enterpriseScale;
 	GLfloat enterpriseZ = enterprisePoints[ENTERPRISE_POINT_COUNT / 2][2] * enterpriseScale;
-
-	GLfloat cameraX = enterpriseX + camPosOffset[0];
-	GLfloat cameraY = enterpriseY + camPosOffset[1];
-	GLfloat cameraZ = enterpriseZ + camPosOffset[2] + 2;
-
-	//gluLookAt(cameraX, cameraY, cameraZ, enterpriseX, enterpriseY, enterpriseZ, 0.0, 1.0, 0.0);
 	gluLookAt(camPos[0], camPos[1], camPos[2], enterpriseX, enterpriseY, enterpriseZ, 0.0, 1.0, 0.0);
 }
 
@@ -300,12 +370,6 @@ void drawAxis(void) {
 	glVertex3f(0, 0, -zRange);
 	glVertex3f(0, 0, zRange);
 	glEnd();
-
-	//glPointSize(10.0f);
-	//glColor3f(1.0, 0.0, 0.0);
-	//glBegin(GL_POINTS);
-	//glVertex3f(enterprisePoints[1989/2][0], enterprisePoints[1989/2][1], enterprisePoints[1989/2][2]);
-	//glEnd();
 }
 
 
@@ -441,25 +505,40 @@ void mySpecialKeyboard(int key, int x, int y) {
 	switch (key) {
 		case GLUT_KEY_UP:
 			moveEnterprise(0, 1, 0);
+			boostersToggled = 1;
 			break;
 		case GLUT_KEY_DOWN:
 			moveEnterprise(0, -1, 0);
+			boostersToggled = 1;
 			break;
 		case GLUT_KEY_RIGHT:
 			moveEnterprise(1, 0, 0);
+			boostersToggled = 1;
 			break;
 		case GLUT_KEY_LEFT:
 			moveEnterprise(-1, 0, 0);
+			boostersToggled = 1;
 			break;
 		case GLUT_KEY_PAGE_UP:
 			moveEnterprise(0, 0, -1);
+			boostersToggled = 1;
 			break;
 		case GLUT_KEY_PAGE_DOWN:
 			moveEnterprise(0, 0, 1);
+			boostersToggled = 1;
 			break;
 	}
 
 	glutPostRedisplay();
+}
+
+void mySpecialKeyboardUp(int key, int x, int y) {
+	if (key == GLUT_KEY_UP || key == GLUT_KEY_DOWN || key == GLUT_KEY_RIGHT || key == GLUT_KEY_LEFT || key == GLUT_KEY_PAGE_UP || key == GLUT_KEY_PAGE_DOWN) {
+		boostersToggled = 0;
+		moveDir[0] = 0;
+		moveDir[1] = 0;
+		moveDir[2] = 0;
+	}
 }
 
 void moveEnterprise(int x, int y, int z) {
@@ -476,7 +555,9 @@ void moveEnterprise(int x, int y, int z) {
 	camPos[1] += y * enterpriseSpeed * enterpriseScale;
 	camPos[2] += z * enterpriseSpeed * enterpriseScale;
 
-	printf("%f, %f, %f\n", enterprisePoints[1989 / 2][0], enterprisePoints[1989 / 2][1], enterprisePoints[1989 / 2][2]);
+	moveDir[0] = x;
+	moveDir[1] = y;
+	moveDir[2] = z;
 }
 
 
@@ -522,10 +603,6 @@ void initializeEnterprise(void) {
 		}
 	}
 
-	//for (int i = 0; i < ENTERPRISE_POINT_COUNT; i++) {
-	//	enterprisePoints[i][1] += 20;
-	//	enterprisePoints[i][2] += 100;
-	//}
 
 	fclose(file);
 
@@ -534,7 +611,6 @@ void initializeEnterprise(void) {
 void drawEnterprise(void) {
 	glPushMatrix();
 	glTranslatef(0, 0, 7.5);
-	//glRotatef(15*, 0.0, 1.0, 0.0);
 	glScalef(enterpriseScale, enterpriseScale, enterpriseScale);
 	GLint colorVal = 1989;
 	for (int i = 0; i < ENTERPRISE_TRIANGLE_COUNT; i++) {
@@ -608,6 +684,8 @@ void main(int argc, char** argv)
 	glutMouseFunc(myMouse);
 
 	glutSpecialFunc(mySpecialKeyboard);
+
+	glutSpecialUpFunc(mySpecialKeyboardUp);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
