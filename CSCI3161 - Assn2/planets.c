@@ -13,7 +13,7 @@
 #define CORONA_LINE_COUNT 160
 #define ENTERPRISE_POINT_COUNT 1201
 #define ENTERPRISE_TRIANGLE_COUNT 1989
-#define PLANET_COUNT 7
+#define PLANET_COUNT 11
 #define M_PI 3.141592
 
 
@@ -43,13 +43,15 @@ typedef struct {
 
 Planet planets[PLANET_COUNT];
 
-GLint moonSetting[] = { 0, 0, 1, 0, 0, 0, 1};
-GLfloat planetSizes[] = { 0.2, 0.5, 0.6, 0.3, 0.6, 0.5, 0.25 };
-GLfloat planetOffset[] = { 0.0, 4.0, 2.0, 20.0, 10.0, 15.0, 2.0 };
-GLfloat planetSpeeds[] = { 0.0, 10.0, 20.0, 5.0, 15.0, 8.0, 5.0 };
-GLfloat planetColors[][3] = { {1.0, 1.0, 0.0}, {0.0, 1.0, 1.0}, {0.5, 0.5, 0.5}, {1.0, 0.0, 1.0}, {0.75, 0.1, 0.25}, {0.05, 0.8, 0.1}, {0.75, 0.75, 0.75} };
-GLfloat planetRotations[][3] = { {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0} };
-GLint moonIndices[] = { -1, 2, -1, -1, -1, 6, -1 };
+GLint moonSetting[] = { 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1};
+GLfloat planetSizes[] = { 0.2, 0.5, 0.6, 0.3, 0.6, 0.5, 0.25, 0.8, 0.4, 0.7, 0.7 };
+GLfloat planetOffset[] = { 0.0, 4.0, 2.0, 20.0, 10.0, 15.0, 2.0, 18.0, 2.0, 25.0, 2.0 };
+GLfloat planetSpeeds[] = { 0.0, 10.0, 20.0, 5.0, 15.0, 8.0, 5.0, 5.0, 13.0, 3.0, 20.0 };
+GLfloat planetColors[][3] = { {1.0, 1.0, 0.0}, {0.0, 1.0, 1.0}, {0.5, 0.5, 0.5}, {1.0, 0.0, 1.0}, {0.75, 0.1, 0.25}, {0.05, 0.8, 0.1}, {0.75, 0.75, 0.75}, {0.0, 0.25, 0.8}, {0.9, 0.9, 0.9}, {0.5, 0.0, 0.5}, {0.25, 0.25, 0.25} };
+GLfloat planetRotations[][3] = { {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0} };
+GLint moonIndices[] = { -1, 2, -1, -1, -1, 6, -1, 8, -1, 10, -1 };
+
+GLint tiltedPlanetIndex = 7;
 
 //Third planet moon (2), seventh planet moon (6), 
 
@@ -57,6 +59,7 @@ GLint windowWidth = 900;
 GLint windowHeight = 600;
 
 GLfloat camPosOffset[3] = {0.0, 0.31, 0.72};
+GLfloat camPos[3] = { 0.0, 1, 10.0 };
 GLfloat theta = 0.0f;
 
 GLfloat xRange = 2.0f;
@@ -76,7 +79,7 @@ GLfloat coronaLength = 0.5;
 GLfloat enterprisePoints[ENTERPRISE_POINT_COUNT][3];
 GLint enterpriseTriangles[ENTERPRISE_TRIANGLE_COUNT][3];
 GLfloat enterpriseSpeed = 0.1;
-GLfloat enterpriseScale = 0.1;
+GLfloat enterpriseScale = 0.55;
 
 GLint leftLaser = 0;
 GLint rightLaser = 0;
@@ -121,7 +124,7 @@ void myDisplay(void) {
 
 void drawLaser(void) {
 	glPushMatrix();
-	glTranslatef(0, 0, 3 * enterpriseScale);
+	glTranslatef(0, 0, 7);
 	glScalef(enterpriseScale, enterpriseScale, enterpriseScale);
 	if (leftLaser == 1) {
 		glLineWidth(5.0f);
@@ -180,9 +183,10 @@ void positionCamera(void) {
 
 	GLfloat cameraX = enterpriseX + camPosOffset[0];
 	GLfloat cameraY = enterpriseY + camPosOffset[1];
-	GLfloat cameraZ = enterpriseZ + camPosOffset[2];
+	GLfloat cameraZ = enterpriseZ + camPosOffset[2] + 2;
 
-	gluLookAt(cameraX, cameraY, cameraZ, enterpriseX, enterpriseY, enterpriseZ, 0.0, 1.0, 0.0);
+	//gluLookAt(cameraX, cameraY, cameraZ, enterpriseX, enterpriseY, enterpriseZ, 0.0, 1.0, 0.0);
+	gluLookAt(camPos[0], camPos[1], camPos[2], enterpriseX, enterpriseY, enterpriseZ, 0.0, 1.0, 0.0);
 }
 
 void drawPlanets() {
@@ -195,6 +199,10 @@ void drawPlanets() {
 	for (int i = 1; i < PLANET_COUNT; i++) {
 		glPushMatrix();
 		if (planets[i].isMoon == 0) {
+			if (i == tiltedPlanetIndex) {
+				glRotatef(-25, 0, 0, 1);
+			}
+
 			glRotatef(theta * planets[i].speed, planets[i].rotations[0], planets[i].rotations[1], planets[i].rotations[2]);
 			glTranslatef(planets[i].offset, 0.0, 0.0);
 			glScalef(planets[i].size, planets[i].size, planets[i].size);
@@ -203,7 +211,6 @@ void drawPlanets() {
 			
 			if (planets[i].moonIndex != -1) {
 				GLint index = planets[i].moonIndex;
-
 
 				glRotatef(theta * planets[index].speed, planets[index].rotations[0], planets[index].rotations[1], planets[index].rotations[2]);
 				glTranslatef(planets[index].offset, 0.0, 0.0);
@@ -217,8 +224,10 @@ void drawPlanets() {
 	}
 
 
+
 	glPopMatrix();
 }
+
 
 void initializePlanets() {
 
@@ -243,6 +252,9 @@ void drawOrbits() {
 	for (int i = 0; i < PLANET_COUNT; i++) {
 		glPushMatrix();
 		if (planets[i].isMoon == 0) {
+			if (i == tiltedPlanetIndex) {
+				glRotatef(-25, 0, 0, 1);
+			}
 			glBegin(GL_LINE_LOOP);
 			for (int j = 0; j < 360; j += 5) {
 				GLfloat angle = j * M_PI / 180.0;
@@ -253,6 +265,7 @@ void drawOrbits() {
 			glEnd();
 
 			if (planets[i].moonIndex != -1) {
+
 				GLint index = planets[i].moonIndex;
 				glRotatef(theta * planets[i].speed, planets[i].rotations[0], planets[i].rotations[1], planets[i].rotations[2]);
 				glTranslatef(planets[i].offset, 0.0, 0.0);
@@ -271,9 +284,9 @@ void drawOrbits() {
 		glPopMatrix();
 	}
 
-
 	glPopMatrix();
 }
+
 
 void drawAxis(void) {
 	glBegin(GL_LINES);
@@ -287,6 +300,12 @@ void drawAxis(void) {
 	glVertex3f(0, 0, -zRange);
 	glVertex3f(0, 0, zRange);
 	glEnd();
+
+	//glPointSize(10.0f);
+	//glColor3f(1.0, 0.0, 0.0);
+	//glBegin(GL_POINTS);
+	//glVertex3f(enterprisePoints[1989/2][0], enterprisePoints[1989/2][1], enterprisePoints[1989/2][2]);
+	//glEnd();
 }
 
 
@@ -451,8 +470,13 @@ void moveEnterprise(int x, int y, int z) {
 		enterprisePoints[i][0] += x * enterpriseSpeed;
 		enterprisePoints[i][1] += y * enterpriseSpeed;
 		enterprisePoints[i][2] += z * enterpriseSpeed;
-	}
 
+	}
+	camPos[0] += x * enterpriseSpeed * enterpriseScale;
+	camPos[1] += y * enterpriseSpeed * enterpriseScale;
+	camPos[2] += z * enterpriseSpeed * enterpriseScale;
+
+	printf("%f, %f, %f\n", enterprisePoints[1989 / 2][0], enterprisePoints[1989 / 2][1], enterprisePoints[1989 / 2][2]);
 }
 
 
@@ -498,10 +522,10 @@ void initializeEnterprise(void) {
 		}
 	}
 
-	for (int i = 0; i < ENTERPRISE_POINT_COUNT; i++) {
-		enterprisePoints[i][1] += 20;
-		enterprisePoints[i][2] += 100;
-	}
+	//for (int i = 0; i < ENTERPRISE_POINT_COUNT; i++) {
+	//	enterprisePoints[i][1] += 20;
+	//	enterprisePoints[i][2] += 100;
+	//}
 
 	fclose(file);
 
@@ -509,7 +533,8 @@ void initializeEnterprise(void) {
 
 void drawEnterprise(void) {
 	glPushMatrix();
-	glTranslatef(0, 0, 3*enterpriseScale);
+	glTranslatef(0, 0, 7.5);
+	//glRotatef(15*, 0.0, 1.0, 0.0);
 	glScalef(enterpriseScale, enterpriseScale, enterpriseScale);
 	GLint colorVal = 1989;
 	for (int i = 0; i < ENTERPRISE_TRIANGLE_COUNT; i++) {
@@ -522,6 +547,8 @@ void drawEnterprise(void) {
 		colorVal++;
 	}
 	glPopMatrix();
+
+
 }
 
 void initializeGL(void)
