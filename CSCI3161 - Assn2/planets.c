@@ -69,7 +69,7 @@ which planet in the planet array is the moon, otherwise -1 */
 GLint moonSetting[] = { 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1};
 GLfloat planetSizes[] = { 0.2, 0.5, 0.6, 0.3, 0.6, 0.5, 0.25, 0.8, 0.4, 0.7, 0.7 };
 GLfloat planetOffset[] = { 0.0, 4.0, 2.0, 20.0, 10.0, 15.0, 2.0, 18.0, 2.0, 25.0, 2.0 };
-GLfloat planetSpeeds[] = { 0.0, 10.0, 20.0, 5.0, 15.0, 8.0, 5.0, 5.0, 13.0, 3.0, 20.0 };
+GLfloat planetSpeeds[] = { 0.0, 2.5, 5.0, 1.25, 3.75, 2.0, 1.25, 1.25, 3.0, 0.75, 5.0 };
 GLfloat planetColors[][3] = { {1.0, 1.0, 0.0}, {0.0, 1.0, 1.0}, {0.5, 0.5, 0.5}, {1.0, 0.0, 1.0}, {0.75, 0.1, 0.25}, {0.05, 0.8, 0.1}, {0.75, 0.75, 0.75}, {0.0, 0.25, 0.8}, {0.9, 0.9, 0.9}, {0.5, 0.0, 0.5}, {0.25, 0.25, 0.25} };
 GLfloat planetRotations[][3] = { {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0} };
 GLint moonIndices[] = { -1, 2, -1, -1, -1, 6, -1, 8, -1, 10, -1 };
@@ -108,7 +108,7 @@ GLfloat coronaLength = 0.5;
 // enterprise variables
 GLfloat enterprisePoints[ENTERPRISE_POINT_COUNT][3];
 GLint enterpriseTriangles[ENTERPRISE_TRIANGLE_COUNT][3];
-GLfloat enterpriseSpeed = 0.1;
+GLfloat enterpriseSpeed = 0.2;
 GLfloat enterpriseScale = 0.55;
 
 // booster variables
@@ -122,8 +122,8 @@ GLint rightLaser = 0;
 GLfloat laserSpawnPos[3];
 GLfloat leftLaserTimer = 0;
 GLfloat rightLaserTimer = 0;
-GLfloat laserTimer = 2;
-GLfloat laserSpeed = 0.25f;
+GLfloat laserTimer = 20;
+GLfloat laserSpeed = 0.01f;
 GLfloat leftLaserPos[] = { 0, 0, 0 };
 GLfloat rightLaserPos[] = { 0, 0, 0 };
 
@@ -209,8 +209,8 @@ void drawLaser(void) {
 		glBegin(GL_LINES);
 		glColor4f(1.0, 0.0, 0.0, 1.0);
 		glVertex3fv(leftLaserPos);
-		glColor4f(0.0, 0.0, 1.0, 0.25);
-		glVertex3f(leftLaserPos[0], leftLaserPos[1], leftLaserPos[2] - 0.5);
+		glColor4f(0.0, 0.0, 1.0, 0.75);
+		glVertex3f(leftLaserPos[0], leftLaserPos[1], leftLaserPos[2] - 0.75);
 		glEnd();
 	}
 	if (rightLaser == 1) {
@@ -220,8 +220,8 @@ void drawLaser(void) {
 		
 		// same as left, but spawning from the right laser spawn location
 		glVertex3fv(rightLaserPos);
-		glColor4f(0.0, 0.0, 1.0, 0.25);
-		glVertex3f(rightLaserPos[0], rightLaserPos[1], rightLaserPos[2] - 0.5);
+		glColor4f(0.0, 0.0, 1.0, 0.75);
+		glVertex3f(rightLaserPos[0], rightLaserPos[1], rightLaserPos[2] - 0.75);
 		glEnd();
 	}
 
@@ -444,7 +444,7 @@ void drawPlanets() {
 			}
 
 			// give our planet a color, scale it down, translate it away from the sun, then rotate by theta which is always changing, giving the planet an orbit
-			glRotatef(theta * planets[i].speed, planets[i].rotations[0], planets[i].rotations[1], planets[i].rotations[2]);
+			glRotatef(theta * planets[i].speed/5, planets[i].rotations[0], planets[i].rotations[1], planets[i].rotations[2]);
 			glTranslatef(planets[i].offset, 0.0, 0.0);
 			glScalef(planets[i].size, planets[i].size, planets[i].size);
 			glColor3fv(planets[i].colors);
@@ -455,7 +455,7 @@ void drawPlanets() {
 				GLint index = planets[i].moonIndex;
 
 				// do the same as above, give the moon a color, scale it, offset it, then rotate 
-				glRotatef(theta * planets[index].speed, planets[index].rotations[0], planets[index].rotations[1], planets[index].rotations[2]);
+				glRotatef(theta * planets[index].speed/5, planets[index].rotations[0], planets[index].rotations[1], planets[index].rotations[2]);
 				glTranslatef(planets[index].offset, 0.0, 0.0);
 				glScalef(planets[index].size, planets[index].size, planets[index].size);
 				glColor3fv(planets[index].colors);
@@ -491,9 +491,9 @@ void drawElipticalPlanet(void) {
 	GLfloat e = 0.9;
 
 	// find the radius and get the x and z components by using cos and sin, where the constant multiplied represents the speed of the orbit
-	GLfloat r = p / (1 - e * cos(theta * 0.2));
-	GLfloat x = r * cos(theta * -0.2);
-	GLfloat z = r * sin(theta * -0.2);
+	GLfloat r = p / (1 - e * cos(theta * 0.01));
+	GLfloat x = r * cos(theta * -0.01);
+	GLfloat z = r * sin(theta * -0.01);
 
 	// create a sphere which is translated to the corresponding x and z to simulate orbitting around theta
 	GLUquadric* quad = gluNewQuadric();
@@ -606,7 +606,7 @@ void drawOrbits() {
 
 				// move orbit with parents transformations
 				GLint index = planets[i].moonIndex;
-				glRotatef(theta * planets[i].speed, planets[i].rotations[0], planets[i].rotations[1], planets[i].rotations[2]);
+				glRotatef(theta * planets[i].speed/5, planets[i].rotations[0], planets[i].rotations[1], planets[i].rotations[2]);
 				glTranslatef(planets[i].offset, 0.0, 0.0);
 				glScalef(planets[i].size, planets[i].size, planets[i].size);
 
