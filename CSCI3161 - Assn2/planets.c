@@ -37,7 +37,6 @@ void twinkleStars(void);
 void printKeyboardControls(void);
 void drawEnterprise(void);
 void drawPlanets(void);
-void drawAxis(void);
 void drawOrbits(void);
 void moveEnterprise(void);
 void positionCamera(void);
@@ -47,6 +46,8 @@ void randomizeCorona(void);
 void drawLaser(void);
 void drawBoosters(void);
 void randomizeBoosters(void);
+void drawElipticalPlanet(void);
+void drawElipticalOrbit(void);
 
 /* struct to define a planet for easy iteration*/
 typedef struct {
@@ -144,8 +145,6 @@ void myDisplay(void) {
 
 	// position the camera
 	positionCamera();
-
-	drawAxis();
 
 	// depending if stars are toggled, draw them
 	if (starsToggled == 1) {
@@ -469,9 +468,69 @@ void drawPlanets() {
 		glPopMatrix();
 	}
 
+	drawElipticalPlanet();
+
 
 	// pop matrix to return to original matrix
 	glPopMatrix();
+}
+
+
+/************************************************************************
+
+	Function:		drawElipticalPlanet
+
+	Description:	Function used to draw the singular eliptical planet. Calculations
+					referenced from https://math.etsu.edu/multicalc/prealpha/chap3/chap3-2/part4.htm
+
+*************************************************************************/
+void drawElipticalPlanet(void) {
+
+	// arbitrary paramaeter and eccentricity variables chosen for eliptical orbit
+	GLfloat p = 1;
+	GLfloat e = 0.9;
+
+	// find the radius and get the x and z components by using cos and sin, where the constant multiplied represents the speed of the orbit
+	GLfloat r = p / (1 - e * cos(theta * 0.2));
+	GLfloat x = r * cos(theta * -0.2);
+	GLfloat z = r * sin(theta * -0.2);
+
+	// create a sphere which is translated to the corresponding x and z to simulate orbitting around theta
+	GLUquadric* quad = gluNewQuadric();
+	glTranslatef(x-2, 0.0, z);
+	glScalef(0.4, 0.4, 0.4);
+	glColor3f(0.2, 0.2, 0.5);
+	gluSphere(quad, 1.0, 32, 32);
+}
+
+
+/************************************************************************
+
+	Function:		drawElipticalOrbit
+
+	Description:	Function used to draw the singular eliptical orbit. Calculations
+					referenced from https://math.etsu.edu/multicalc/prealpha/chap3/chap3-2/part4.htm
+
+*************************************************************************/
+void drawElipticalOrbit(void) {
+
+	// same parameter and eccentricity variable as elipitical planet
+	GLfloat p = 1;
+	GLfloat e = 0.9;
+
+
+	glColor3f(1.0, 1.0, 1.0);
+
+	// draw many little lines at the points on the elipitical to simulate drawing the entire elipsis
+	glBegin(GL_LINE_LOOP);
+	for (int j = 0; j < 360; j += 5) {
+		GLfloat angle = j * M_PI / 180.0;
+		GLfloat r = p / (1 - e * cos(angle));
+		GLfloat x = r * cos(angle) - 2;
+		GLfloat z = r * sin(angle);
+		glVertex3f(x, 0.0, z);
+	}
+	glEnd();
 }
 
 
@@ -499,7 +558,6 @@ void initializePlanets() {
 
 	}
 }
-
 
 
 /************************************************************************
@@ -563,28 +621,15 @@ void drawOrbits() {
 				glEnd();
 			}
 		}
-
+		
 		// pop matrix to return to the sun's orbit transformation matrix
 		glPopMatrix();
 	}
 
+	drawElipticalOrbit();
+
 	// pop to return to original transformation matrix
 	glPopMatrix();
-}
-
-
-void drawAxis(void) {
-	glBegin(GL_LINES);
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(-xRange, 0, 0);
-	glVertex3f(xRange, 0, 0);
-
-	glVertex3f(0, -yRange, 0);
-	glVertex3f(0, yRange, 0);
-
-	glVertex3f(0, 0, -zRange);
-	glVertex3f(0, 0, zRange);
-	glEnd();
 }
 
 
